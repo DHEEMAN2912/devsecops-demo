@@ -1,1 +1,20 @@
+name: ci-cd
+on:
+ push:
+  branches: [main]
+  paths-ignore: 
+    - 'kubernetes/deployment.yaml'
+
+ pull_request: 
+  branches: [main]
+
+
+jobs:
+  test:
+    name: unit-testing
+    runs-on: ubuntu-latest
+    steps:
+      - name: Code-Checkout
+        uses: actions/checkout@v4
+
 
