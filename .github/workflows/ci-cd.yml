@@ -1,14 +1,11 @@
 name: ci-cd
-
 on:
   push:
     branches: [main]
     paths-ignore:
       - 'kubernetes/deployment.yaml'
-
   pull_request:
     branches: [main]
-
 jobs:
   test:
     name: Unit-Testing
@@ -16,38 +13,30 @@ jobs:
     steps:
       - name: Code-Checkout
         uses: actions/checkout@v4
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-
       - name: Install Dependencies
         run: npm ci
-
       - name: Run Unit Test Cases
         run: npm test
-
   lint:
     name: Static-Code-Analysis
     runs-on: ubuntu-latest
     steps:
       - name: Code-Checkout
         uses: actions/checkout@v4
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-
       - name: Install Dependencies
         run: npm ci
-
       - name: Run Static Code Analysis
         run: npm run lint
-
   build:
     name: Build-Node-js-Application
     needs: [test, lint]
@@ -55,25 +44,20 @@ jobs:
     steps:
       - name: Code-Checkout
         uses: actions/checkout@v4
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-
       - name: Install Dependencies
         run: npm ci
-
       - name: Build-Node-js-Application
         run: npm run build
-
       - name: Upload-Build-Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Build Artifact
           path: dist/
-
   docker:
     name: Build-and-Push-the-Docker-Image
     needs: [build]
@@ -83,34 +67,28 @@ jobs:
       IMAGE_NAME: ${{ github.repository }}
     outputs:
       image_tag: ${{ steps.set_output.outputs.image_tag }}
-
     steps:
       - name: Code-Checkout
         uses: actions/checkout@v4
-
       - name: Download-Build-Artifact
         uses: actions/download-artifact@v4
         with:
           name: Build Artifact
           path: dist/
-
       - name: Set-Up-Docker
         uses: docker/setup-buildx-action@v3
-
       - name: Login-to-Github-Container-Registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.TOKEN }}
-
       - name: Docker-Meta-Data
         uses: docker/metadata-action@v5
         id: meta
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: type=sha,format=long
-
       - name: Build-Docker-Image
         uses: docker/build-push-action@v5
         with:
@@ -119,8 +97,6 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           load: true # Ensures Trivy can scan the image before pushing
-
-
       - name: Scan-Docker-Image
         uses: aquasecurity/trivy-action@master
         with:
@@ -130,7 +106,6 @@ jobs:
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
-
       - name: Push-Docker-Image
         uses: docker/build-push-action@v5
         with:
@@ -138,7 +113,24 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-
       - name: Set image tag output
         id: set_output
         run: echo "image_tag=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+
+
+  deploy-k8s:
+    name: Deploy-to-k8s
+    needs: [docker]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+
+    steps:
+      - name: Code-Checkout
+        uses: actions/checkout@v4
+
+
+      - name: Download-Build-Artifact
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
