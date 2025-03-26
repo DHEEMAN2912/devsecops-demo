@@ -132,5 +132,22 @@ jobs:
 
       - name: Download-Build-Artifact
         run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
+          git config user.name "Dheeman Das"
+          git config user.email "dheemandass2912@gmail.com"
+
+      - name: Update-K8s-Manifest-File
+        env:
+            REGISTRY: ghcr.io
+            GITHUB_REPOSITORY: ${{ github.repository }}
+            IMAGE_TAG: sha-${{ github.sha }}
+        run: |
+          #Define new image tag
+          NEW_IMAGE: "${REGISTRY}/{GITHUB_REPOSITORY}:{IMAGE_TAG}"
+
+          # Update the deployment file directly
+          sed -i "s|image: ${REGISTRY}/.*|image: ${NEW_IMAGE}|g" kubernetes/deployment.yaml
+
+          # Verify the change
+          echo "Updated deployment to use image: ${NEW_IMAGE}"
+          grep -A 1 "image:" kubernetes/deployment.yaml
+            
