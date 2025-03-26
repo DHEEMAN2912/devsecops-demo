@@ -142,7 +142,7 @@ jobs:
             IMAGE_TAG: sha-${{ github.sha }}
         run: |
           #Define new image tag
-          NEW_IMAGE: "${REGISTRY}/{GITHUB_REPOSITORY}:{IMAGE_TAG}"
+          NEW_IMAGE: "${REGISTRY}/${GITHUB_REPOSITORY}:${IMAGE_TAG}"
 
           # Update the deployment file directly
           sed -i "s|image: ${REGISTRY}/.*|image: ${NEW_IMAGE}|g" kubernetes/deployment.yaml
